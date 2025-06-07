@@ -1,0 +1,7 @@
+output/*/
+src/[!d]*
+src/[d][!e]*
+src/de[!m]*
+src/demo[!/]*
+**/__pycache__/
+llm-rule

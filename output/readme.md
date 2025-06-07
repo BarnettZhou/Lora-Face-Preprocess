@@ -1,0 +1,1 @@
+The processed images will be output in this directory.
