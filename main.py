@@ -5,9 +5,7 @@ from typing import List, Dict, Any, Optional
 import asyncio
 import os
 import uuid
-from pathlib import Path
 import threading
-from core.run_as_task import generate_portraits
 from core.config import Config
 from fastapi.responses import FileResponse
 import mimetypes
@@ -155,7 +153,10 @@ def run_task_in_background(task_id: str):
         # 确保输出目录存在
         from core.run_as_task import ensure_output_directory
         ensure_output_directory(config["output_dir"])
-        
+
+        # 是否填空白
+        fill_blank = config["blank"] == "fill-blank"
+
         # 处理每个图片
         for i, image_file in enumerate(image_files):
             try:
@@ -174,11 +175,11 @@ def run_task_in_background(task_id: str):
                     output_path = os.path.join(config["output_dir"], output_filename)
                     
                     if img_type == "face":
-                        generate_portrait_face(image_file, output_path, target_size)
+                        generate_portrait_face(image_file, output_path, target_size, fill_blank)
                     elif img_type == "upper_body":
-                        generate_portrait_upper_body(image_file, output_path, target_size)
+                        generate_portrait_upper_body(image_file, output_path, target_size, fill_blank)
                     elif img_type == "half_body":
-                        generate_portrait_half_body(image_file, output_path, target_size)
+                        generate_portrait_half_body(image_file, output_path, target_size, fill_blank)
                         
                     # 记录处理结果
                     task["results"].append({
