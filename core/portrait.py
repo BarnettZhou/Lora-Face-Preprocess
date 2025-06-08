@@ -1,5 +1,5 @@
 import face_recognition
-from PIL import Image, ImageDraw
+from PIL import Image
 import numpy as np
 
 def _load_image(image_path):

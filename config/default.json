@@ -1,0 +1,13 @@
+{
+    "src_dir": "./src/demo",
+    "output_dir": "./output",
+    "threshold": 0.8,
+    "size": {
+        "width": 1024,
+        "height": 1024
+    },
+    "format": "jpg",
+    "types": ["face","upper_body", "half_body"],
+    "center": false,
+    "blank": "keep-blank"
+}

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>人脸预处理工具</title>
+    <link href="/static/asset/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/asset/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .container-left { width: 300px; }
+        .container-right { width: 300px; }
+        .container-center { flex: 1; }
+        .changed-option { border-left: 2px solid red !important; }
+        .image-item { position: relative; cursor: pointer; }
+        .image-item:hover .image-controls { display: block !important; }
+        .image-controls { display: none; position: absolute; top: 5px; right: 5px; }
+        .image-disabled { opacity: 0.5; filter: grayscale(100%); }
+        .progress-container { display: none; }
+        .result-item { margin-bottom: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid h-100">
+        <div class="row h-100">
+            <!-- 左侧配置面板 -->
+            <div class="col-auto container-left p-3 border-end">
+                <h5>配置选项</h5>
+                
+                <!-- 目录选择 -->
+                <div class="mb-3">
+                    <label class="form-label">源目录</label>
+                    <input type="text" class="form-control" id="srcDir" value="./src/demo">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">输出目录</label>
+                    <input type="text" class="form-control" id="outputDir" value="./output/demo">
+                </div>
+                
+                <!-- 检测阈值 -->
+                <div class="mb-3">
+                    <label class="form-label">检测阈值</label>
+                    <select class="form-select" id="threshold">
+                        <option value="0.5">0.5</option>
+                        <option value="0.6">0.6</option>
+                        <option value="0.7">0.7</option>
+                        <option value="0.8" selected>0.8</option>
+                        <option value="0.9">0.9</option>
+                    </select>
+                </div>
+                
+                <!-- 输出尺寸 -->
+                <div class="mb-3">
+                    <label class="form-label">输出尺寸</label>
+                    <select class="form-select" id="outputSize">
+                        <optgroup label="1:1">
+                            <option value="512x512">512 × 512</option>
+                            <option value="768x768">768 × 768</option>
+                            <option value="1024x1024" selected>1024 × 1024</option>
+                        </optgroup>
+                        <optgroup label="3:4">
+                            <option value="576x768">576 × 768</option>
+                            <option value="768x1024">768 × 1024</option>
+                        </optgroup>
+                        <optgroup label="4:3">
+                            <option value="768x576">768 × 576</option>
+                            <option value="1024x768">1024 × 768</option>
+                        </optgroup>
+                    </select>
+                </div>
+                
+                <!-- 输出格式 -->
+                <div class="mb-3">
+                    <label class="form-label">输出格式</label>
+                    <select class="form-select" id="outputFormat">
+                        <option value="jpg" selected>JPG</option>
+                        <option value="png">PNG</option>
+                    </select>
+                </div>
+                
+                <!-- 输出类型 -->
+                <div class="mb-3">
+                    <label class="form-label">输出类型</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="face" id="typeFace" checked>
+                        <label class="form-check-label" for="typeFace">头像 (face)</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="upper_body" id="typeUpperBody" checked>
+                        <label class="form-check-label" for="typeUpperBody">腰部以上半身像 (upper_body)</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="half_body" id="typeHalfBody" checked>
+                        <label class="form-check-label" for="typeHalfBody">膝盖以上半身像 (half_body)</label>
+                    </div>
+                </div>
+                
+                <!-- 头像居中 -->
+                <div class="mb-3">
+                    <label class="form-label">头像居中</label>
+                    <select class="form-select" id="centerOption">
+                        <option value="false" selected>不强制居中</option>
+                        <option value="true">强制居中</option>
+                    </select>
+                </div>
+                
+                <!-- 空白处理 -->
+                <div class="mb-3">
+                    <label class="form-label">空白处理</label>
+                    <select class="form-select" id="blankOption">
+                        <option value="keep-blank" selected>保留空白</option>
+                        <option value="fill-blank">单像素填充</option>
+                    </select>
+                </div>
+                
+                <!-- 操作按钮 -->
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary" id="saveConfig">保存配置</button>
+                    <button class="btn btn-secondary" id="resetConfig">重置配置</button>
+                </div>
+            </div>
+            
+            <!-- 中间图片列表 -->
+            <div class="col container-center p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5>图片列表</h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary" id="refreshImages">
+                            <i class="bi bi-arrow-clockwise"></i> 刷新
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" id="toggleView">
+                            <i class="bi bi-grid-3x3-gap"></i> 切换视图
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 排序选项 -->
+                <div class="mb-3">
+                    <select class="form-select form-select-sm" id="sortOption">
+                        <option value="name-asc">按名称正序</option>
+                        <option value="name-desc">按名称倒序</option>
+                        <option value="time-asc">按时间正序</option>
+                        <option value="time-desc">按时间倒序</option>
+                    </select>
+                </div>
+                
+                <!-- 图片容器 -->
+                <div id="imageContainer" class="row g-2">
+                    <div class="col-12 text-center text-muted">
+                        <p>请选择源目录以查看图片</p>
+                    </div>
+                </div>
+                
+                <!-- 批量处理按钮 -->
+                <div class="mt-3">
+                    <button class="btn btn-success" id="startBatch" disabled>
+                        <i class="bi bi-play-fill"></i> 开始批量处理
+                    </button>
+                </div>
+                
+                <!-- 进度条 -->
+                <div class="progress-container mt-3">
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div class="mt-2">
+                        <small id="progressText">准备中...</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右侧结果面板 -->
+            <div class="col-auto container-right p-3 border-start">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5>处理结果</h5>
+                    <button class="btn btn-sm btn-outline-primary" id="openOutputDir">
+                        <i class="bi bi-folder2-open"></i> 打开目录
+                    </button>
+                </div>
+                
+                <div id="resultContainer">
+                    <div class="text-center text-muted">
+                        <p>暂无处理结果</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/asset/bootstrap.bundle.min.js"></script>
+    <script src="/static/app.js"></script>
+</body>
+</html>

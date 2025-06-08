@@ -1,0 +1,12 @@
+services:
+  face-preprocess:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/app/src
+      - ./output:/app/output
+      - ./config:/app/config
+    environment:
+      - PYTHONPATH=/app
+    restart: unless-stopped

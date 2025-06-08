@@ -5,3 +5,4 @@ src/de[!m]*
 src/demo[!/]*
 **/__pycache__/
 llm-rule
+test.py
