@@ -50,8 +50,7 @@ class FaceProcessApp {
         document.getElementById('refreshImages').addEventListener('click', () => this.refreshImages());
         document.getElementById('toggleView').addEventListener('click', () => this.toggleView());
         document.getElementById('startBatch').addEventListener('click', () => this.startBatchProcess());
-        document.getElementById('openOutputDir').addEventListener('click', () => this.openOutputDir());
-        
+
         // 排序变更
         document.getElementById('sortOption').addEventListener('change', () => this.sortImages());
     }
@@ -303,7 +302,6 @@ class FaceProcessApp {
                 if (data.status === 'completed' || data.status === 'failed') {
                     setTimeout(() => {
                         this.hideProgress();
-                        this.loadResults();
                     }, 2000);
                 }
                 break;
@@ -331,55 +329,6 @@ class FaceProcessApp {
         progressBar.style.width = progress + '%';
         progressBar.textContent = progress + '%';
         progressText.textContent = message;
-    }
-    
-    async loadResults() {
-        if (!this.currentTask) return;
-        
-        try {
-            const response = await fetch(`/task_status/${this.currentTask}`);
-            const result = await response.json();
-            
-            if (result.success) {
-                this.renderResults(result.data.results);
-            }
-        } catch (error) {
-            console.error('加载结果失败:', error);
-        }
-    }
-    
-    renderResults(results) {
-        const container = document.getElementById('resultContainer');
-        
-        if (!results || results.length === 0) {
-            container.innerHTML = '<div class="text-center text-muted"><p>暂无处理结果</p></div>';
-            return;
-        }
-        
-        container.innerHTML = results.map(result => {
-            const statusClass = result.status === 'success' ? 'border-success' : 'border-danger';
-            const statusIcon = result.status === 'success' ? 'bi-check-circle-fill text-success' : 'bi-x-circle-fill text-danger';
-            
-            return `
-                <div class="result-item ${statusClass}">
-                    <div class="d-flex align-items-center mb-2">
-                        <i class="bi ${statusIcon} me-2"></i>
-                        <strong>${result.source}</strong>
-                    </div>
-                    ${result.status === 'success' ? 
-                        `<div><small class="text-muted">输出: ${result.output}</small></div>
-                         <div><small class="text-muted">类型: ${result.type}</small></div>` :
-                        `<div><small class="text-danger">错误: ${result.error}</small></div>`
-                    }
-                </div>
-            `;
-        }).join('');
-    }
-    
-    openOutputDir() {
-        const outputDir = document.getElementById('outputDir').value;
-        // 这里可以添加打开文件夹的逻辑，但由于浏览器安全限制，通常需要后端支持
-        alert(`输出目录: ${outputDir}`);
     }
     
     showError(message) {

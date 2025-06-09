@@ -68,9 +68,19 @@ def _extract_key_points(landmarks):
     
     return eyes_center, bottom_chin
 
-def _calulate_scale_and_paste_coords(eyes_center, bottom_chin, target_eyes_y, target_chin_y, target_size):
+def _calulate_scale_and_paste_coords(
+    eyes_center, bottom_chin,
+    target_eyes_y, target_chin_y,
+    target_size
+    ):
     """
     计算缩放比例和粘贴坐标
+    Args:
+        eyes_center (tuple): 眼睛中心点坐标 (x, y)
+        bottom_chin (tuple): 下巴最下方点坐标 (x, y)
+        target_eyes_y (int): 目标眼睛Y坐标
+        target_chin_y (int): 目标下巴Y坐标
+        target_size (tuple): 目标尺寸 (宽度, 高度)
 
     Returns:
         tuple: (scale_factor, paste_coords) 缩放比例和粘贴坐标
@@ -93,7 +103,11 @@ def _calulate_scale_and_paste_coords(eyes_center, bottom_chin, target_eyes_y, ta
 
     return scale_factor, paste_coords
 
-def _resize_and_paste_image(image, scale_factor, paste_coords, target_size, fill_blank):
+def _resize_and_paste_image(
+    image, scale_factor,
+    paste_coords, target_size,
+    fill_blank
+    ):
     """
     调整图片大小并粘贴到目标位置
 
@@ -123,30 +137,31 @@ def _resize_and_paste_image(image, scale_factor, paste_coords, target_size, fill
 
     # 检查是否有空白区域，并根据fill_blank决定是否填充
     has_blank_area = (
-        paste_x > 0
-        or paste_y > 0
-        or paste_x + resized_width < target_width
-        or paste_y + resized_height < target_height
+        paste_x > 0                                 # 左侧会有空白
+        or paste_y > 0                              # 顶部会有空白
+        or paste_x + resized_width < target_width   # 右侧会有空白
+        or paste_y + resized_height < target_height # 底部会有空白
     )
     if has_blank_area and fill_blank:
         result_array = np.array(result_image)
-        # 填充水平方向的空白
-        if paste_x > 0:
-            # 填充左边
-            left_edge = result_array[:, paste_x:paste_x+1, :]
-            result_array[:, :paste_x, :] = np.repeat(left_edge, paste_x, axis=1)
 
-            # 填充右边
+        # 填充水平方向的空白
+        # 填充左边
+        if paste_x > 0:
+            left_edge = result_array[:, paste_x-1:paste_x+1, :]
+            result_array[:, :paste_x, :] = np.repeat(left_edge, paste_x, axis=1)
+        # 填充右边
+        if paste_x + resized_width < target_width:
             right_edge = result_array[:, paste_x+resized_width-1:paste_x+resized_width, :]
             result_array[:, paste_x+resized_width:, :] = np.repeat(right_edge, target_width-paste_x-resized_width, axis=1)
 
         # 填充垂直方向的空白
+        # 填充上边
         if paste_y > 0:
-            # 填充上边
-            top_edge = result_array[paste_y:paste_y+1, :, :]
+            top_edge = result_array[paste_y-1:paste_y+1, :, :]
             result_array[:paste_y, :, :] = np.repeat(top_edge, paste_y, axis=0)
-
-            # 填充下边
+        # 填充下边
+        if paste_y + resized_height < target_height:
             bottom_edge = result_array[paste_y+resized_height-1:paste_y+resized_height, :, :]
             result_array[paste_y+resized_height:, :, :] = np.repeat(bottom_edge, target_height-paste_y-resized_height, axis=0)
 
@@ -155,7 +170,11 @@ def _resize_and_paste_image(image, scale_factor, paste_coords, target_size, fill
         # 不填充或没有空白区域，直接返回
         return result_image
 
-def _save_image(image, output_path, target_eyes_y, target_chin_y, portrait_type):
+def _save_image(
+    image, output_path,
+    target_eyes_y, target_chin_y,
+    portrait_type
+    ):
     """
     保存图片并输出信息
     
@@ -198,29 +217,25 @@ def _generate_portrait_base(image_path, output_path, target_size, target_eyes_y,
     # 提取关键点
     eyes_center, bottom_chin = _extract_key_points(landmarks)
 
-    # 计算裁剪区域
-    # crop_coords = _calculate_crop_region(eyes_center, bottom_chin, target_eyes_y, target_chin_y, target_size)
+    # 计算缩放大小及粘贴坐标
     scale_factor, paste_coords = _calulate_scale_and_paste_coords(eyes_center, bottom_chin, target_eyes_y, target_chin_y, target_size)
 
     # 调整图片大小并粘贴到目标位置
     processed_image = _resize_and_paste_image(image, scale_factor, paste_coords, target_size, fill_blank)
-    # 裁剪和调整图片大小
-    # processed_image = _crop_and_resize_image(image, crop_coords, target_size, fill_blank)
 
     # 保存图片
     _save_image(processed_image, output_path, target_eyes_y, target_chin_y, portrait_type)
 
 def _get_face_target_y_coords(target_size):
     """
-    根据目标尺寸计算目标眼睛Y坐标和目标下巴Y坐标
-    用于 face
+    根据目标尺寸计算目标眼睛Y坐标和目标下巴Y坐标，用于 face
     """
     target_width, target_height = target_size
 
     # 1:1 的情况
     if target_width == target_height:
         target_eyes_y = int(target_height * 0.5)    # 眼睛Y坐标在高度的一半
-        target_chin_y = int(target_height * 0.77)   # 下巴Y坐标在高度的77%处
+        target_chin_y = int(target_height * 0.84)   # 下巴Y坐标在高度的84%处
         return target_eyes_y, target_chin_y
     
     # 3:4 的情况
@@ -237,8 +252,8 @@ def _get_face_target_y_coords(target_size):
 def generate_portrait_face(image_path, output_path, target_size=(1024, 1024), fill_blank=False):
     ""
     """
-    检测图片中的人脸，并根据人脸位置、大小信息，生成指定大小的人像图片。
-    具体来说，将人的眼睛放在高度512像素左右，下巴下缘在高度790像素左右。
+    根据人脸位置、大小信息，生成指定大小的人像图片，用于 face 类型
+    生成的图片仅脸部
 
     Args:
         image_path (str): 输入图片的路径。
@@ -251,8 +266,7 @@ def generate_portrait_face(image_path, output_path, target_size=(1024, 1024), fi
 
 def _get_upper_body_target_y_coords(target_size):
     """
-    根据目标尺寸计算目标眼睛Y坐标和目标下巴Y坐标
-    用于 upper body
+    根据目标尺寸计算目标眼睛Y坐标和目标下巴Y坐标，用于 upper body
     """
     target_width, target_height = target_size
 
@@ -275,9 +289,8 @@ def _get_upper_body_target_y_coords(target_size):
 
 def generate_portrait_upper_body(image_path, output_path="portrait_upper_body.jpg", target_size=(1024, 1024), fill_blank=False):
     """
-    检测图片中的人脸，并根据人脸位置、大小信息，生成指定大小的半身人像图片。
-    具体来说，将人的眼睛放在高度330像素左右，下巴下缘在高度512像素左右。
-    适合生成半身照效果。
+    根据人脸位置、大小信息，生成指定大小的人像图片，用于 upper body 类型
+    生成的图片从胸部到脸部
 
     Args:
         image_path (str): 输入图片的路径。
@@ -290,8 +303,7 @@ def generate_portrait_upper_body(image_path, output_path="portrait_upper_body.jp
 
 def _get_half_body_target_y_coords(target_size):
     """
-    根据目标尺寸计算目标眼睛Y坐标和目标下巴Y坐标
-    用于 half body
+    根据目标尺寸计算目标眼睛Y坐标和目标下巴Y坐标，用于 half body
     """
     target_width, target_height = target_size
 
@@ -314,9 +326,8 @@ def _get_half_body_target_y_coords(target_size):
 
 def generate_portrait_half_body(image_path, output_path="portrait_half_body.jpg", target_size=(1024, 1024), fill_blank=False):
     """
-    检测图片中的人脸，并根据人脸位置、大小信息，生成指定大小的上半身人像图片。
-    具体来说，将人的眼睛放在高度360像素左右，下巴下缘在高度470像素左右。
-    适合生成上半身照效果。
+    根据人脸位置、大小信息，生成指定大小的人像图片，用于 half body 类型
+    生成的图片从腰部到脸部
 
     Args:
         image_path (str): 输入图片的路径。
