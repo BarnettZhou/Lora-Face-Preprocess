@@ -6,18 +6,7 @@
     <title>人脸预处理工具</title>
     <link href="/static/asset/bootstrap.min.css" rel="stylesheet">
     <link href="/static/asset/bootstrap-icons.css" rel="stylesheet">
-    <style>
-        .container-left { width: 300px; }
-        .container-right { width: 300px; }
-        .container-center { flex: 1; }
-        .changed-option { border-left: 2px solid red !important; }
-        .image-item { position: relative; cursor: pointer; }
-        .image-item:hover .image-controls { display: block !important; }
-        .image-controls { display: none; position: absolute; top: 5px; right: 5px; }
-        .image-disabled { opacity: 0.5; filter: grayscale(100%); }
-        .progress-container { display: none; }
-        .result-item { margin-bottom: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
-    </style>
+    <link href="/static/style.css" rel="stylesheet">
 </head>
 <body>
     <div class="container-fluid h-100">
@@ -122,46 +111,55 @@
             
             <!-- 中间图片列表 -->
             <div class="col container-center p-3">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5>图片列表</h5>
-                    <div class="d-flex align-items-center gap-2">
-                        <!-- 排序选项 -->
-                        <select class="form-select form-select-sm" id="sortOption" style="width: auto;">
-                            <option value="name-asc">按名称正序</option>
-                            <option value="name-desc">按名称倒序</option>
-                            <option value="time-asc">按时间正序</option>
-                            <option value="time-desc">按时间倒序</option>
-                        </select>
-                        <button class="btn btn-sm btn-outline-primary" id="refreshImages">
-                            <i class="bi bi-arrow-clockwise"></i> 刷新
-                        </button>
-                        <button class="btn btn-sm btn-outline-secondary" id="toggleView">
-                            <i class="bi bi-grid-3x3-gap"></i> 切换视图
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- 批量处理按钮和进度条 -->
-                <div class="d-flex align-items-center gap-3 mb-3">
-                    <button class="btn btn-success" id="startBatch" disabled>
-                        <i class="bi bi-play-fill"></i> 开始批量处理
-                    </button>
-                    
-                    <!-- 进度条容器 -->
-                    <div class="progress-container flex-grow-1">
-                        <div class="progress">
-                            <div class="progress-bar" role="progressbar" style="width: 0%"></div>
-                        </div>
-                        <div class="mt-1">
-                            <small id="progressText">准备中...</small>
+                <!-- 顶部控制区域 - 悬浮展示 -->
+                <div id="imageContainerTop" class="image-container-top">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5>图片列表</h5>
+                        <div class="d-flex align-items-center gap-2">
+                            <!-- 排序选项 -->
+                            <select class="form-select form-select-sm" id="sortOption" style="width: auto;">
+                                <option value="name-asc">按名称正序</option>
+                                <option value="name-desc">按名称倒序</option>
+                                <option value="time-asc">按时间正序</option>
+                                <option value="time-desc">按时间倒序</option>
+                            </select>
+                            <select class="form-select form-select-sm" id="imagesPerRow" style="width: auto;">
+                                <option value="4">每行4张</option>
+                                <option value="6">每行6张</option>
+                                <option value="8" selected>每行8张</option>
+                                <option value="10">每行10张</option>
+                                <option value="12">每行12张</option>
+                            </select>
+                            <button class="btn btn-sm btn-outline-primary" id="refreshImages">
+                                <i class="bi bi-arrow-clockwise"></i> 刷新
+                            </button>
                         </div>
                     </div>
+
+                    <!-- 批量处理按钮和进度条 -->
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <button class="btn btn-success" id="startBatch" disabled>
+                            <i class="bi bi-play-fill"></i> 开始批量处理
+                        </button>
+                        
+                        <!-- 进度条容器 -->
+                        <div class="progress-container flex-grow-1">
+                            <div class="progress">
+                                <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                            </div>
+                            <div class="mt-1">
+                                <small id="progressText">准备中...</small>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                
-                <!-- 图片容器 -->
-                <div id="imageContainer" class="row g-2">
-                    <div class="col-12 text-center text-muted">
-                        <p>请选择源目录以查看图片</p>
+
+                <!-- 主要图片容器 - 固定高度滚动 -->
+                <div id="imageContainerMain" class="image-container-main">
+                    <div id="imageContainer" class="row g-2">
+                        <div class="col-12 text-center text-muted">
+                            <p>请选择源目录以查看图片</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -169,6 +167,6 @@
     </div>
     
     <script src="/static/asset/bootstrap.bundle.min.js"></script>
-    <script src="/static/app.js?time=202506090025"></script>
+    <script src="/static/app.js?time=202506092339"></script>
 </body>
 </html>

@@ -1,0 +1,152 @@
+.container-left { width: 300px; }
+.container-right { width: 300px; }
+.container-center { flex: 1; }
+.changed-option { border-left: 2px solid red !important; }
+.image-item { position: relative; cursor: pointer; }
+.image-item:hover .image-controls { display: block !important; }
+.image-controls { display: none; position: absolute; top: 5px; right: 5px; }
+.image-disabled { opacity: 0.5; filter: grayscale(100%); }
+.progress-container { display: none; }
+.result-item { margin-bottom: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+
+/* 3:4比例图片容器样式 */
+.image-container {
+    aspect-ratio: 3/4;
+    overflow: hidden;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.image-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+/* 自定义Bootstrap列类 */
+.col-xl-1-5 {
+    flex: 0 0 auto;
+    width: 12.5%; /* 1/8 */
+}
+
+.col-lg-1-5 {
+    flex: 0 0 auto;
+    width: 20%; /* 1/5 */
+}
+
+.col-xl-1-2 {
+    flex: 0 0 auto;
+    width: 10%; /* 1/10 */
+}
+
+@media (min-width: 1200px) {
+    .col-xl-1-5 {
+        width: 12.5%;
+    }
+    .col-xl-1-2 {
+        width: 10%;
+    }
+}
+
+/* 顶部控制区域样式 - 悬浮展示 */
+.image-container-top {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: white;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 15px;
+    margin-bottom: 15px;
+}
+
+/* 主要图片容器样式 - 固定高度滚动 */
+.image-container-main {
+    height: calc(100vh - 200px); /* 根据实际需要调整高度 */
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* 滚动条样式优化 */
+.image-container-main::-webkit-scrollbar {
+    width: 8px;
+}
+
+.image-container-main::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.image-container-main::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.image-container-main::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* 自定义Bootstrap列类 */
+.col-xl-1-5 {
+    flex: 0 0 auto;
+    width: 12.5%; /* 1/8 */
+}
+
+.col-lg-1-5 {
+    flex: 0 0 auto;
+    width: 20%; /* 1/5 */
+}
+
+.col-xl-1-2 {
+    flex: 0 0 auto;
+    width: 10%; /* 1/10 */
+}
+
+@media (min-width: 1200px) {
+    .col-xl-1-5 {
+        width: 12.5%;
+    }
+    .col-xl-1-2 {
+        width: 10%;
+    }
+}
+
+/* 顶部控制区域样式 - 悬浮展示 */
+.image-container-top {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: white;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 15px;
+    margin-bottom: 15px;
+}
+
+/* 主要图片容器样式 - 固定高度滚动 */
+.image-container-main {
+    height: calc(100vh - 200px); /* 根据实际需要调整高度 */
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* 滚动条样式优化 */
+.image-container-main::-webkit-scrollbar {
+    width: 8px;
+}
+
+.image-container-main::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.image-container-main::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.image-container-main::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}

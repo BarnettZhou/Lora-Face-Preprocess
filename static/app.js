@@ -48,11 +48,13 @@ class FaceProcessApp {
         document.getElementById('saveConfig').addEventListener('click', () => this.saveConfig());
         document.getElementById('resetConfig').addEventListener('click', () => this.resetConfig());
         document.getElementById('refreshImages').addEventListener('click', () => this.refreshImages());
-        document.getElementById('toggleView').addEventListener('click', () => this.toggleView());
         document.getElementById('startBatch').addEventListener('click', () => this.startBatchProcess());
 
         // 排序变更
         document.getElementById('sortOption').addEventListener('change', () => this.sortImages());
+        
+        // 每行图片数量变更
+        document.getElementById('imagesPerRow').addEventListener('change', () => this.renderImages());
     }
     
     loadConfig() {
@@ -165,15 +167,32 @@ class FaceProcessApp {
         }
         
         const sortedImages = this.getSortedImages();
+        const imagesPerRow = parseInt(document.getElementById('imagesPerRow').value);
+        
+        // 根据每行图片数量计算Bootstrap列类
+        const getColClass = (perRow) => {
+            switch(perRow) {
+                case 4: return 'col-3';
+                case 6: return 'col-2';
+                case 8: return 'col-xl-1-5 col-lg-2 col-md-3 col-sm-4 col-6';
+                case 10: return 'col-xl-1-2 col-lg-1-5 col-md-2 col-sm-3 col-4';
+                case 12: return 'col-1';
+                default: return 'col-xl-1-5 col-lg-2 col-md-3 col-sm-4 col-6';
+            }
+        };
+        
+        const colClass = getColClass(imagesPerRow);
         
         container.innerHTML = sortedImages.map((img, index) => {
             const isDisabled = this.disabledImages.has(img.name);
             // 使用后端图片服务API而不是直接的文件路径
             const imageUrl = `/serve_image/${encodeURIComponent(img.path)}`;
             return `
-                <div class="col-md-4 col-lg-3">
+                <div class="${colClass} mb-3">
                     <div class="image-item ${isDisabled ? 'image-disabled' : ''}" data-name="${img.name}">
-                        <img src="${imageUrl}" class="img-fluid rounded" alt="${img.name}">
+                        <div class="image-container">
+                            <img src="${imageUrl}" alt="${img.name}">
+                        </div>
                         <div class="image-controls">
                             <button class="btn btn-sm ${isDisabled ? 'btn-success' : 'btn-danger'}" 
                                     onclick="app.toggleImage('${img.name}')">
