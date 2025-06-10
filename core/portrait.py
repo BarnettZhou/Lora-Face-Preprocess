@@ -1,6 +1,7 @@
 import face_recognition
 from PIL import Image
 import numpy as np
+import cv2
 
 def _load_image(image_path):
     """
@@ -103,10 +104,10 @@ def _calulate_scale_and_paste_coords(
 
     return scale_factor, paste_coords
 
-def _resize_and_paste_image(
+def _resize_and_paste_image_pillow(
     image, scale_factor,
     paste_coords, target_size,
-    fill_blank
+    fill_blank=False
     ):
     """
     调整图片大小并粘贴到目标位置
@@ -170,7 +171,79 @@ def _resize_and_paste_image(
         # 不填充或没有空白区域，直接返回
         return result_image
 
-def _save_image(
+def _resize_and_paste_image_cv2(
+    image, scale_factor, paste_coords,
+    target_size, fill_blank=False
+    ):
+
+    target_w, target_h = target_size
+
+    # 缩放图像
+    resized = cv2.resize(image, None, fx=scale_factor, fy=scale_factor, interpolation=cv2.INTER_LINEAR)
+
+    # 创建黑色背景图像
+    result = np.zeros((target_h, target_w, 3), dtype=np.uint8)
+
+    # 粘贴位置
+    paste_x, paste_y = paste_coords
+    
+    # 计算实际可粘贴的区域
+    src_x1 = max(-paste_x, 0)  # 源图像起始x坐标
+    src_y1 = max(-paste_y, 0)  # 源图像起始y坐标
+    dst_x1 = max(paste_x, 0)   # 目标图像起始x坐标
+    dst_y1 = max(paste_y, 0)   # 目标图像起始y坐标
+
+    # 计算可复制的宽度和高度
+    copy_w = min(resized.shape[1] - src_x1, target_w - dst_x1)
+    copy_h = min(resized.shape[0] - src_y1, target_h - dst_y1)
+    
+    # 确保复制区域有效
+    if copy_w > 0 and copy_h > 0:
+        src_x2 = src_x1 + copy_w
+        src_y2 = src_y1 + copy_h
+        dst_x2 = dst_x1 + copy_w
+        dst_y2 = dst_y1 + copy_h
+        
+        # 安全地复制图像区域
+        result[dst_y1:dst_y2, dst_x1:dst_x2] = resized[src_y1:src_y2, src_x1:src_x2]
+
+
+    has_blank_area = (
+        dst_x1 > 0              # 左侧会有空白
+        or dst_y1 > 0           # 顶部会有空白
+        or dst_x2 < target_w    # 右侧会有空白
+        or dst_y2 < target_h    # 底部会有空白
+    )
+    if has_blank_area and fill_blank:
+        top = max(0, dst_y1)
+        bottom = max(0, target_h - dst_y2)
+        left = max(0, dst_x1)
+        right = max(0, target_w - dst_x2)
+
+        # 使用粘贴图像的边缘像素填充空白区域
+        if top > 0 and src_y1 == 0:
+            # 填充顶部：使用 resized 图像的顶部一行
+            top_line = resized[0:1, :, :]
+            result[0:top, :, :] = cv2.resize(top_line, (target_w, top), interpolation=cv2.INTER_NEAREST)
+
+        if bottom > 0 and src_y2 == resized.shape[0]:
+            # 填充底部：使用 resized 图像的底部一行
+            bottom_line = resized[-1:, :, :]
+            result[target_h - bottom:target_h, :, :] = cv2.resize(bottom_line, (target_w, bottom), interpolation=cv2.INTER_NEAREST)
+
+        if left > 0 and src_x1 == 0:
+            # 填充左侧：使用 resized 图像的最左一列
+            left_line = resized[:, 0:1, :]
+            result[:, 0:left, :] = cv2.resize(left_line, (left, target_h), interpolation=cv2.INTER_NEAREST)
+
+        if right > 0 and src_x2 == resized.shape[1]:
+            # 填充右侧：使用 resized 图像的最右一列
+            right_line = resized[:, -1:, :]
+            result[:, target_w - right:target_w, :] = cv2.resize(right_line, (right, target_h), interpolation=cv2.INTER_NEAREST)
+
+    return result
+
+def _save_image_pillow(
     image, output_path,
     target_eyes_y, target_chin_y,
     portrait_type
@@ -189,6 +262,25 @@ def _save_image(
         image.save(output_path)
         print(f"成功生成{portrait_type}人像图片并保存到 '{output_path}'")
         print(f"眼睛位置：{target_eyes_y}像素，下巴位置：{target_chin_y}像素")
+    except Exception as e:
+        print(f"保存图片时发生错误：{e}")
+
+def _save_image_cv2(
+    image, output_path,
+    target_eyes_y, target_chin_y,
+    portrait_type
+    ):
+    """
+    保存图片并输出信息
+    """
+    try:
+        bgr_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        success = cv2.imwrite(output_path, bgr_image)
+        if not success:
+            print(f"[ERROR] cv2.imwrite 返回 False，路径可能无效或图像格式错误：{output_path}")
+        else:
+            print(f"成功生成{portrait_type}人像图片并保存到 '{output_path}'")
+            print(f"眼睛位置：{target_eyes_y}像素，下巴位置：{target_chin_y}像素")
     except Exception as e:
         print(f"保存图片时发生错误：{e}")
 
@@ -221,10 +313,10 @@ def _generate_portrait_base(image_path, output_path, target_size, target_eyes_y,
     scale_factor, paste_coords = _calulate_scale_and_paste_coords(eyes_center, bottom_chin, target_eyes_y, target_chin_y, target_size)
 
     # 调整图片大小并粘贴到目标位置
-    processed_image = _resize_and_paste_image(image, scale_factor, paste_coords, target_size, fill_blank)
+    processed_image = _resize_and_paste_image_cv2(image, scale_factor, paste_coords, target_size, fill_blank)
 
     # 保存图片
-    _save_image(processed_image, output_path, target_eyes_y, target_chin_y, portrait_type)
+    _save_image_cv2(processed_image, output_path, target_eyes_y, target_chin_y, portrait_type)
 
 def _get_face_target_y_coords(target_size):
     """
