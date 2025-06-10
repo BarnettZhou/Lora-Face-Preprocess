@@ -11,8 +11,8 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 
 from core.config import Config
-from core.run_as_task import get_image_files
-from core.run_as_task import ensure_output_directory
+from core.file_mange import get_image_files, ensure_output_directory
+from core.portrait import generate_portrait_face, generate_portrait_upper_body, generate_portrait_half_body
 from models.TaskRequest import TaskRequest
 from models.ConfigRequest import ConfigRequest
 
@@ -165,8 +165,6 @@ def run_task_in_background(task_id: str):
                                  f"正在处理: {filename}")
 
                 # 根据类型生成不同的图片
-                from core.portrait import generate_portrait_face, generate_portrait_upper_body, generate_portrait_half_body
-
                 target_size = (config["size"]["width"], config["size"]["height"])
 
                 for img_type in config["types"]:
