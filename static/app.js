@@ -239,20 +239,6 @@ class FaceProcessApp {
         this.renderImages();
     }
     
-    toggleView() {
-        // 简单的视图切换实现
-        const container = document.getElementById('imageContainer');
-        const isGrid = container.classList.contains('row');
-        
-        if (isGrid) {
-            container.classList.remove('row', 'g-2');
-            container.classList.add('list-view');
-        } else {
-            container.classList.remove('list-view');
-            container.classList.add('row', 'g-2');
-        }
-    }
-    
     async startBatchProcess() {
         const config = this.getCurrentConfig();
         
