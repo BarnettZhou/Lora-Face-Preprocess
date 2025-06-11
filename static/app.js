@@ -186,7 +186,7 @@ class FaceProcessApp {
         container.innerHTML = sortedImages.map((img, index) => {
             const isDisabled = this.disabledImages.has(img.name);
             // 使用后端图片服务API而不是直接的文件路径
-            const imageUrl = `/serve_image/${encodeURIComponent(img.path)}`;
+            const imageUrl = `/serve_image/${encodeURIComponent(img.path)}?size=400x400`;
             return `
                 <div class="${colClass} mb-3">
                     <div class="image-item ${isDisabled ? 'image-disabled' : ''}" data-name="${img.name}">

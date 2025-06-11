@@ -1,7 +1,10 @@
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Query
+from fastapi.responses import StreamingResponse, FileResponse
+import io
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.responses import FileResponse
+from PIL import Image
 import mimetypes
 from typing import Dict
 import asyncio
@@ -12,7 +15,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 from core.config import Config
 from core.file_mange import get_image_files, ensure_output_directory
-from core.portrait import generate_portrait_face, generate_portrait_upper_body, generate_portrait_half_body
+from core.portrait import PortraitGenerator
+
 from models.TaskRequest import TaskRequest
 from models.ConfigRequest import ConfigRequest
 
@@ -156,6 +160,8 @@ def run_task_in_background(task_id: str):
         # 是否填空白
         fill_blank = config["blank"] == "fill-blank"
 
+        pg = PortraitGenerator('pillow')
+
         # 处理每个图片
         for i, image_file in enumerate(image_files):
             try:
@@ -164,19 +170,23 @@ def run_task_in_background(task_id: str):
                                  int((i / total_files) * 100), 
                                  f"正在处理: {filename}")
 
-                # 根据类型生成不同的图片
-                target_size = (config["size"]["width"], config["size"]["height"])
+                pg.load_image(image_file)
+                pg.set_target_size((config["size"]["width"], config["size"]["height"]))
+                pg.set_fill_blank(fill_blank)
 
                 for img_type in config["types"]:
                     output_filename = f"{img_type}_{i+1:03d}.{config['format']}"
                     output_path = os.path.join(config["output_dir"], output_filename)
-                    
+
                     if img_type == "face":
-                        generate_portrait_face(image_file, output_path, target_size, fill_blank)
+                        image = pg.generate_face_portrait()
+                        pg.save_image(image, output_path)
                     elif img_type == "upper_body":
-                        generate_portrait_upper_body(image_file, output_path, target_size, fill_blank)
+                        image = pg.generate_upper_body_portrait()
+                        pg.save_image(image, output_path)
                     elif img_type == "half_body":
-                        generate_portrait_half_body(image_file, output_path, target_size, fill_blank)
+                        image = pg.generate_half_body_portrait()
+                        pg.save_image(image, output_path)
 
                     # 记录处理结果
                     task["results"].append({
@@ -189,6 +199,7 @@ def run_task_in_background(task_id: str):
                 processed_files += 1
 
             except Exception as e:
+                print(e)
                 # 记录失败结果
                 task["results"].append({
                     "source": os.path.basename(image_file),
@@ -264,7 +275,6 @@ async def save_config(request: ConfigRequest):
 async def list_images(path: str):
     """获取指定目录下的图片列表"""
     try:
-        from core.run_as_task import get_image_files
         image_files = get_image_files(path)
 
         images = []
@@ -297,8 +307,8 @@ async def get_task_status(task_id: str):
     }
 
 @app.get("/serve_image/{path:path}")
-async def serve_image(path: str):
-    """提供图片文件服务"""
+async def serve_image(path: str, size: str = Query("original")):
+    """提供图片文件服务，支持缩略图"""
     try:
         # 确保路径安全，防止目录遍历攻击
         if ".." in path:
@@ -313,10 +323,44 @@ async def serve_image(path: str):
         if not mime_type or not mime_type.startswith('image/'):
             raise HTTPException(status_code=400, detail="不是有效的图片文件")
 
-        return FileResponse(path, media_type=mime_type)
+        # 如果请求原始尺寸，直接返回文件
+        if size == "original":
+            return FileResponse(path, media_type=mime_type)
 
+        # 解析尺寸参数
+        try:
+            width, height = map(int, size.split("x"))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="无效的尺寸格式，请使用 'widthxheight' 格式")
+
+        # 生成缩略图
+        with Image.open(path) as img:
+            # 使用thumbnail方法保持宽高比
+            img.thumbnail((width, height), Image.Resampling.LANCZOS)
+            
+            # 将图片保存到内存中
+            img_byte_arr = io.BytesIO()
+            
+            # 根据原始格式保存，如果是JPEG则保持JPEG格式
+            img_format = img.format if img.format else 'JPEG'
+            if img_format.upper() == 'JPEG':
+                # 对于JPEG格式，设置质量参数
+                img.save(img_byte_arr, format=img_format, quality=85, optimize=True)
+            else:
+                img.save(img_byte_arr, format=img_format)
+            
+            img_byte_arr.seek(0)
+            
+            # 返回缩略图
+            return StreamingResponse(
+                io.BytesIO(img_byte_arr.getvalue()), 
+                media_type=mime_type
+            )
+
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"读取图片失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"处理图片失败: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
