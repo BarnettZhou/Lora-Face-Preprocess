@@ -14,7 +14,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 
 from core.config import Config
-from core.file_mange import get_image_files, ensure_output_directory
+from core.file_mange import get_image_files, ensure_output_directory, rename_images_by_creation_time
 from core.portrait import PortraitGenerator
 
 from models.TaskRequest import TaskRequest
@@ -361,6 +361,33 @@ async def serve_image(path: str, size: str = Query("original")):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"处理图片失败: {str(e)}")
+
+@app.post("/rename_images")
+async def rename_images(request: dict):
+    """按创建时间重命名图片文件"""
+    try:
+        directory = request.get('directory')
+        if not directory:
+            raise HTTPException(status_code=400, detail="目录参数不能为空")
+        
+        if not os.path.exists(directory):
+            raise HTTPException(status_code=404, detail="目录不存在")
+        
+        result = rename_images_by_creation_time(directory)
+        
+        if result["success"]:
+            return {
+                "success": True,
+                "message": result["message"],
+                "data": result.get("renamed_files", [])
+            }
+        else:
+            raise HTTPException(status_code=500, detail=result["message"])
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"重命名失败: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

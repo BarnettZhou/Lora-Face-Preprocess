@@ -55,6 +55,9 @@ class FaceProcessApp {
         
         // 每行图片数量变更
         document.getElementById('imagesPerRow').addEventListener('change', () => this.renderImages());
+    
+        // 添加重命名按钮事件
+        document.getElementById('renameImages').addEventListener('click', () => this.renameImages());
     }
     
     loadConfig() {
@@ -136,6 +139,49 @@ class FaceProcessApp {
             el.classList.remove('changed-option');
         });
         localStorage.removeItem('faceProcessConfig');
+    }
+
+    // 添加重命名方法
+    async renameImages() {
+        const srcDir = document.getElementById('srcDir').value;
+        if (!srcDir) {
+            alert('请先选择源目录!');
+            return;
+        }
+        
+        if (!confirm('确定要按创建时间重命名所有图片文件吗？此操作不可撤销！')) {
+            return;
+        }
+        
+        try {
+            // 禁用按钮防止重复点击
+            const button = document.getElementById('renameImages');
+            button.disabled = true;
+            button.innerHTML = '<i class="bi bi-hourglass-split"></i> 重命名中...';
+            
+            const response = await fetch('/rename_images', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ directory: srcDir })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                alert(result.message);
+                // 自动刷新图片列表
+                await this.refreshImages();
+            } else {
+                alert('重命名失败: ' + result.message);
+            }
+        } catch (error) {
+            alert('重命名失败: ' + error.message);
+        } finally {
+            // 恢复按钮状态
+            const button = document.getElementById('renameImages');
+            button.disabled = false;
+            button.innerHTML = '<i class="bi bi-arrow-clockwise"></i> 按序列重命名文件';
+        }
     }
     
     async refreshImages() {
