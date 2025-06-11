@@ -380,22 +380,36 @@ class PortraitGenerator:
             # 填充水平方向的空白
             # 填充左边
             if paste_x > 0:
-                left_edge = result_array[:, paste_x-1:paste_x+1, :]
-                result_array[:, :paste_x, :] = np.repeat(left_edge, paste_x, axis=1)
+                # 获取粘贴区域的左边缘像素列
+                left_edge_col = result_array[:, paste_x:paste_x+1, :]
+                # 重复填充左侧空白区域
+                for i in range(paste_x):
+                    result_array[:, i:i+1, :] = left_edge_col
+
             # 填充右边
             if paste_x + resized_width < target_width:
-                right_edge = result_array[:, paste_x+resized_width-1:paste_x+resized_width, :]
-                result_array[:, paste_x+resized_width:, :] = np.repeat(right_edge, target_width-paste_x-resized_width, axis=1)
+                # 获取粘贴区域的右边缘像素列
+                right_edge_col = result_array[:, paste_x+resized_width-1:paste_x+resized_width, :]
+                # 重复填充右侧空白区域
+                for i in range(paste_x + resized_width, target_width):
+                    result_array[:, i:i+1, :] = right_edge_col
 
             # 填充垂直方向的空白
             # 填充上边
             if paste_y > 0:
-                top_edge = result_array[paste_y-1:paste_y+1, :, :]
-                result_array[:paste_y, :, :] = np.repeat(top_edge, paste_y, axis=0)
+                # 获取粘贴区域的上边缘像素行
+                top_edge_row = result_array[paste_y:paste_y+1, :, :]
+                # 重复填充上侧空白区域
+                for i in range(paste_y):
+                    result_array[i:i+1, :, :] = top_edge_row
+                    
             # 填充下边
             if paste_y + resized_height < target_height:
-                bottom_edge = result_array[paste_y+resized_height-1:paste_y+resized_height, :, :]
-                result_array[paste_y+resized_height:, :, :] = np.repeat(bottom_edge, target_height-paste_y-resized_height, axis=0)
+                # 获取粘贴区域的下边缘像素行
+                bottom_edge_row = result_array[paste_y+resized_height-1:paste_y+resized_height, :, :]
+                # 重复填充下侧空白区域
+                for i in range(paste_y + resized_height, target_height):
+                    result_array[i:i+1, :, :] = bottom_edge_row
 
             return Image.fromarray(result_array)
         else:
