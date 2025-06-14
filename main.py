@@ -169,23 +169,29 @@ def run_task_in_background(task_id: str):
                 update_task_status(task_id, "running", 
                                  int((i / total_files) * 100), 
                                  f"正在处理: {filename}")
+                
+                root, ext = os.path.splitext(filename)
+                if ext.startswith("."):
+                    ext = ext[1:]
+                formatted_filename = f"{root}_{ext}"
 
                 pg.load_image(image_file)
                 pg.set_target_size((config["size"]["width"], config["size"]["height"]))
                 pg.set_fill_blank(fill_blank)
+                pg.set_return_mode('all')
 
                 for img_type in config["types"]:
-                    output_filename = f"{img_type}_{i+1:03d}.{config['format']}"
-                    output_path = os.path.join(config["output_dir"], output_filename)
 
                     if img_type == "face":
-                        image = pg.generate_face_portrait()
-                        pg.save_image(image, output_path)
+                        images = pg.generate_face_portrait()
                     elif img_type == "upper_body":
-                        image = pg.generate_upper_body_portrait()
-                        pg.save_image(image, output_path)
+                        images = pg.generate_upper_body_portrait()
                     elif img_type == "half_body":
-                        image = pg.generate_half_body_portrait()
+                        images = pg.generate_half_body_portrait()
+                    
+                    for image_index, image in enumerate(images):
+                        output_filename = f"{formatted_filename}_{img_type}_{image_index+1:03d}.{config['format']}"
+                        output_path = os.path.join(config["output_dir"], output_filename)
                         pg.save_image(image, output_path)
 
                     # 记录处理结果

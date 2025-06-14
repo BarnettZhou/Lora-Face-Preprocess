@@ -1,5 +1,6 @@
 import face_recognition
 import numpy as np
+from PIL import Image, ImageOps
 
 def check_image_initialized():
     """
@@ -35,24 +36,30 @@ def check_image_module_selected():
 
 class PortraitGenerator:
 
+    image_path = None
     image = None
+
     landmarks = None
     eyes_center = (0, 0)
     bottom_chin = (0, 0)
-    target_size = (1024, 1024)
 
-    # face_portrait_image = None
-    # upper_body_portrait_image = None
-    # half_body_portrait_image = None
+    key_points = []
+    target_y_coords = []
+
+    target_size = (1024, 1024)
 
     face_target_eyes_y = 0
     face_target_chin_y = 0
+
     upper_body_target_eyes_y = 0
     upper_body_target_chin_y = 0
+
     half_body_target_eyes_y = 0
     half_body_target_chin_y = 0
 
     fill_blank = False
+
+    return_mode = 'all'
 
     image_module = None
     image_lib = None
@@ -81,6 +88,12 @@ class PortraitGenerator:
     def set_fill_blank(self, fill_blank):
         self.fill_blank = fill_blank
         return self
+    
+    def set_return_mode(self, return_mode):
+        if return_mode not in ['all', 'first']:
+            raise Exception('return_mode must be all or first')
+        self.return_mode = return_mode
+        return self
 
     @check_image_module_selected()
     @check_image_initialized()
@@ -88,14 +101,23 @@ class PortraitGenerator:
         """
         生成脸部肖像
         """
+        images = []
         self.__caculate_face_target_y_coords()
-        scale_factor, paste_coords = self.__calulate_scale_and_paste_coords(self.face_target_eyes_y, self.face_target_chin_y)
-        if self.image_module == "cv2":
-            return self.__resize_and_paste_image_cv2(scale_factor, paste_coords)
-        elif self.image_module == "pillow":
-            return self.__resize_and_paste_image_pillow(scale_factor, paste_coords)
-        else:
-            raise Exception('image_module must be pillow or cv2')
+        for key_point in self.key_points:
+            scale_factor, paste_coords = self.__calulate_scale_and_paste_coords(
+                key_point['eyes_center'],
+                key_point['bottom_chin'],
+                'face'
+                )
+            print(scale_factor, paste_coords)
+            if self.image_module == "cv2":
+                images.append(self.__resize_and_paste_image_cv2(scale_factor, paste_coords))
+            elif self.image_module == "pillow":
+                images.append(self.__resize_and_paste_image_pillow(scale_factor, paste_coords))
+            else:
+                raise Exception('image_module must be pillow or cv2')
+
+        return images
 
     @check_image_module_selected()
     @check_image_initialized()
@@ -103,14 +125,21 @@ class PortraitGenerator:
         """
         生成胸部以上肖像
         """
+        images = []
         self.__caculate_upper_body_target_y_coords()
-        scale_factor, paste_coords = self.__calulate_scale_and_paste_coords(self.upper_body_target_eyes_y, self.upper_body_target_chin_y)
-        if self.image_module == "cv2":
-            return self.__resize_and_paste_image_cv2(scale_factor, paste_coords)
-        elif self.image_module == "pillow":
-            return self.__resize_and_paste_image_pillow(scale_factor, paste_coords)
-        else:
-            raise Exception('image_module must be pillow or cv2')
+        for key_point in self.key_points:
+            scale_factor, paste_coords = self.__calulate_scale_and_paste_coords(
+                key_point['eyes_center'],
+                key_point['bottom_chin'],
+                'upper_body'
+                )
+            if self.image_module == "cv2":
+                images.append(self.__resize_and_paste_image_cv2(scale_factor, paste_coords))
+            elif self.image_module == "pillow":
+                images.append(self.__resize_and_paste_image_pillow(scale_factor, paste_coords))
+            else:
+                raise Exception('image_module must be pillow or cv2')
+        return images
 
     @check_image_module_selected()
     @check_image_initialized()
@@ -118,14 +147,21 @@ class PortraitGenerator:
         """
         生成半身肖像
         """
+        images = []
         self.__caculate_half_body_target_y_coords()
-        scale_factor, paste_coords = self.__calulate_scale_and_paste_coords(self.half_body_target_eyes_y, self.half_body_target_chin_y)
-        if self.image_module == "cv2":
-            return self.__resize_and_paste_image_cv2(scale_factor, paste_coords)
-        elif self.image_module == "pillow":
-            return self.__resize_and_paste_image_pillow(scale_factor, paste_coords)
-        else:
-            raise Exception('image_module must be pillow or cv2')
+        for key_point in self.key_points:
+            scale_factor, paste_coords = self.__calulate_scale_and_paste_coords(
+                key_point['eyes_center'],
+                key_point['bottom_chin'],
+                'half_body'
+                )
+            if self.image_module == "cv2":
+                images.append(self.__resize_and_paste_image_cv2(scale_factor, paste_coords))
+            elif self.image_module == "pillow":
+                images.append(self.__resize_and_paste_image_pillow(scale_factor, paste_coords))
+            else:
+                raise Exception('image_module must be pillow or cv2')
+        return images
 
     def save_image(self, image, path):
         """
@@ -145,7 +181,11 @@ class PortraitGenerator:
         """
         加载图像
         """
-        self.image = face_recognition.load_image_file(image_path)
+        self.image_path = image_path
+        img_pil = Image.open(image_path)
+        corrected_img_pil = ImageOps.exif_transpose(img_pil)
+        self.image = np.array(corrected_img_pil)
+
         return self
 
     def __detect_face(self):
@@ -154,9 +194,13 @@ class PortraitGenerator:
         """
         face_locations = face_recognition.face_locations(self.image)
         if len(face_locations) == 0:
-            raise Exception('No face detected')
+            raise Exception('No face detected: ' + self.image_path)
         else:
-            self.landmarks = face_recognition.face_landmarks(self.image)[0]
+            landmarks = face_recognition.face_landmarks(self.image)
+            if self.return_mode == 'all':
+                self.landmarks = landmarks
+            else:
+                self.landmarks = [landmarks[0]]
             return self
 
     def __extract_key_points(self):
@@ -164,20 +208,24 @@ class PortraitGenerator:
         提取关键点
         """
         landmarks = self.landmarks
-        left_eye = np.mean(landmarks['left_eye'], axis=0).astype(int)
-        right_eye = np.mean(landmarks['right_eye'], axis=0).astype(int)
+        for landmark in landmarks:
 
-        # 计算两眼中心点
-        eyes_center_x = (left_eye[0] + right_eye[0]) / 2
-        eyes_center_y = (left_eye[1] + right_eye[1]) / 2
-        self.eyes_center = (eyes_center_x, eyes_center_y)
+            left_eye = np.mean(landmark['left_eye'], axis=0).astype(int)
+            right_eye = np.mean(landmark['right_eye'], axis=0).astype(int)
 
-        # 找到下巴最下方的点
-        chin_points = landmarks['chin']
-        bottom_chin_y = max([p[1] for p in chin_points])
-        bottom_chin_x = chin_points[np.argmax([p[1] for p in chin_points])][0]
-        self.bottom_chin = (bottom_chin_x, bottom_chin_y)
-        
+            # 计算两眼中心点
+            eyes_center_x = (left_eye[0] + right_eye[0]) / 2
+            eyes_center_y = (left_eye[1] + right_eye[1]) / 2
+            eyes_center = (eyes_center_x, eyes_center_y)
+
+            # 找到下巴最下方的点
+            chin_points = landmark['chin']
+            bottom_chin_y = max([p[1] for p in chin_points])
+            bottom_chin_x = chin_points[np.argmax([p[1] for p in chin_points])][0]
+            bottom_chin = (bottom_chin_x, bottom_chin_y)
+
+            self.key_points.append({'eyes_center': eyes_center, 'bottom_chin': bottom_chin})
+
         return self
 
     def __caculate_face_target_y_coords(self):
@@ -255,22 +303,33 @@ class PortraitGenerator:
         self.half_body_target_chin_y = target_chin_y
         return self
 
-    def __calulate_scale_and_paste_coords(self, target_eyes_y, target_chin_y):
+    def __calulate_scale_and_paste_coords(self, eyes_center, bottom_chin, portrait_type):
         """
         根据目标眼睛Y坐标和目标下巴Y坐标计算缩放因子和粘贴坐标
         """
         target_width = self.target_size[0]
 
         # 计算眼睛到下巴的距离
-        eyes_to_chin_distance = self.bottom_chin[1] - self.eyes_center[1]
-        target_eyes_to_chin_distance = target_chin_y - target_eyes_y
+        eyes_to_chin_distance = bottom_chin[1] - eyes_center[1]
+        if portrait_type == 'face':
+            target_chin_y = self.face_target_chin_y
+            target_eyes_y = self.face_target_eyes_y
+        elif portrait_type == 'upper_body':
+            target_chin_y = self.upper_body_target_chin_y
+            target_eyes_y = self.upper_body_target_eyes_y
+        elif portrait_type == 'half_body':
+            target_chin_y = self.half_body_target_chin_y
+            target_eyes_y = self.half_body_target_eyes_y
+        else:
+            raise Exception("Unknown portrait type")
 
         # 计算缩放因子
+        target_eyes_to_chin_distance =  target_chin_y - target_eyes_y
         scale_factor = target_eyes_to_chin_distance / eyes_to_chin_distance
 
         # 计算粘贴坐标
-        paste_x = int(target_width / 2 - self.eyes_center[0] * scale_factor)
-        paste_y = int(target_eyes_y - self.eyes_center[1] * scale_factor)
+        paste_x = int(target_width / 2 - eyes_center[0] * scale_factor)
+        paste_y = int(target_eyes_y - eyes_center[1] * scale_factor)
 
         paste_coords = (paste_x, paste_y)
 
@@ -420,11 +479,12 @@ if __name__ == '__main__':
     pg = PortraitGenerator('cv2')
     pg.load_image('e:/codes/face-preprocess/src/demo/President_Barack_Obama.jpg')
 
-    face_image = pg.generate_face_portrait()
-    pg.save_image(face_image, 'e:/codes/face-preprocess/src/demo-out/President_Barack_Obama_face.jpg')
-
-    upper_body_image = pg.generate_upper_body_portrait()
-    pg.save_image(upper_body_image, 'e:/codes/face-preprocess/src/demo-out/President_Barack_Obama_upper_body.jpg')
-
-    half_body_image = pg.generate_half_body_portrait()
-    pg.save_image(half_body_image, 'e:/codes/face-preprocess/src/demo-out/President_Barack_Obama_half_body.jpg')
+    face_images = pg.generate_face_portrait()
+    for index, face_image in enumerate(face_images):
+        pg.save_image(face_image, f'e:/codes/face-preprocess/src/demo-out/President_Barack_Obama_face_{index}.jpg')
+    upper_body_images = pg.generate_upper_body_portrait()
+    for index, upper_body_image in enumerate(upper_body_images):
+        pg.save_image(upper_body_image, f'e:/codes/face-preprocess/src/demo-out/President_Barack_Obama_upper_body_{index}.jpg')
+    half_body_images = pg.generate_half_body_portrait()
+    for index, half_body_image in enumerate(half_body_images):
+        pg.save_image(half_body_image, f'e:/codes/face-preprocess/src/demo-out/President_Barack_Obama_half_body_{index}.jpg')
